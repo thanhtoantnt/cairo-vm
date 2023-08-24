@@ -978,6 +978,30 @@ impl CairoRunner {
         Ok(())
     }
 
+    pub fn run_from_entrypoint_fuzz(
+        &mut self,
+        entrypoint: usize,
+        args: Vec<MaybeRelocatable>,
+        verify_secure: bool,
+        vm: &mut VirtualMachine,
+        hint_processor: &mut dyn HintProcessor,
+    ) -> Result<(), VirtualMachineError> {
+        let stack = args;
+        let return_fp = MaybeRelocatable::from(0);
+        let end = self.initialize_function_entrypoint(vm, entrypoint, stack, return_fp.into())?;
+
+        self.initialize_vm(vm)?;
+
+        self.run_until_pc(end, vm, hint_processor)?;
+        self.end_run(true, false, vm, hint_processor)?;
+
+        if verify_secure {
+            verify_secure_runner(self, false, None, vm)?;
+        }
+
+        Ok(())
+    }
+
     // Returns Ok(()) if there are enough allocated cells for the builtins.
     // If not, the number of steps should be increased or a different layout should be used.
     pub fn check_used_cells(&self, vm: &VirtualMachine) -> Result<(), VirtualMachineError> {
